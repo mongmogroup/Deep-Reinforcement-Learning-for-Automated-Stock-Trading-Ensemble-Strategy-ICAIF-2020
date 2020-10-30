@@ -1,3 +1,5 @@
+import warnings
+warnings.simplefilter("ignore")
 # common library
 import pandas as pd
 import numpy as np
