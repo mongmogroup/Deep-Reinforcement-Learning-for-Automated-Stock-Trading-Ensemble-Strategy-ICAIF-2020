@@ -1,26 +1,20 @@
 # common library
-import pandas as pd
-import numpy as np
 import time
-import gym
 
-# RL models from stable-baselines
-from stable_baselines import SAC
-from stable_baselines import PPO2
 from stable_baselines import A2C
 from stable_baselines import DDPG
+# RL models from stable-baselines
+from stable_baselines import PPO2
 from stable_baselines import TD3
-from stable_baselines.ddpg.policies import DDPGPolicy
-from stable_baselines.common.policies import MlpPolicy
-from stable_baselines.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise, AdaptiveParamNoiseSpec
+from stable_baselines.common.noise import OrnsteinUhlenbeckActionNoise
 from stable_baselines.common.vec_env import DummyVecEnv
-from preprocessing.preprocessors import *
-from config import config
 
+from config import config
+from env.EnvMultipleStock_trade import StockEnvTrade
 # customized env
 from env.EnvMultipleStock_train import StockEnvTrain
 from env.EnvMultipleStock_validation import StockEnvValidation
-from env.EnvMultipleStock_trade import StockEnvTrade
+from preprocessing.preprocessors import *
 
 
 def train_A2C(env_train, model_name, timesteps=50000):
@@ -40,7 +34,7 @@ def train_TD3(env_train, model_name, timesteps=50000):
     """TD3 model"""
 
     start = time.time()
-    #model = DDPG('MlpPolicy', env_train)
+    # model = DDPG('MlpPolicy', env_train)
     model = TD3('MlpPolicy', env_train)
     model.learn(total_timesteps=timesteps, log_interval=10)
     end = time.time()
@@ -63,8 +57,9 @@ def train_DDPG(env_train, model_name, timesteps=10000):
     end = time.time()
 
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-    print('Training time (DDPG): ', (end-start)/60,' minutes')
+    print('Training time (DDPG): ', (end - start) / 60, ' minutes')
     return model
+
 
 def train_PPO(env_train, model_name, timesteps=50000):
     """PPO model"""
@@ -143,8 +138,8 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     model_use = []
 
     # based on the analysis of the in-sample data
-    #turbulence_threshold = 140
-    insample_turbulence = df[(df.datadate<20151000) & (df.datadate>=20090000)]
+    # turbulence_threshold = 140
+    insample_turbulence = df[(df.datadate < 20151000) & (df.datadate >= 20090000)]
     insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
     insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
 
@@ -161,9 +156,10 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
 
         # Tuning trubulence index based on historical data
         # Turbulence lookback window is one quarter
-        historical_turbulence = df[(df.datadate<unique_trade_date[i - rebalance_window - validation_window]) & (df.datadate>=(unique_trade_date[i - rebalance_window - validation_window-63]))]
+        historical_turbulence = df[(df.datadate < unique_trade_date[i - rebalance_window - validation_window]) & (
+                    df.datadate >= (unique_trade_date[i - rebalance_window - validation_window - 63]))]
         historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
-        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)   
+        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)
 
         if historical_turbulence_mean > insample_turbulence_threshold:
             # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
@@ -237,7 +233,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
 
         ############## Trading starts ##############    
         print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
-        #print("Used Model: ", model_ensemble)
+        # print("Used Model: ", model_ensemble)
 
         last_state_ensemble = DRL_prediction(df=df, model=model_ensemble, name="ensemble",
                                              last_state=last_state_ensemble, iter_num=i,
